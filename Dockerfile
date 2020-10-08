@@ -1,7 +1,5 @@
-FROM jenkins/jenkins:2.249.1-lts-slim
- 
-USER root
-COPY jenkins-entrypoint.sh /entrypoint.sh 
-ENTRYPOINT ["/bin/sh", "/entrypoint.sh"]
-CMD ["/sbin/tini", "--", "/usr/local/bin/jenkins.sh"]
+FROM openjdk:14-jdk
+
+COPY ./target/*.jar /usr/src/pet-clinic/
+WORKDIR /usr/src/pet-clinic
 
