@@ -37,8 +37,6 @@ pipeline {
 
                 sh 'MAVEN_CONFIG="" ./mvnw package'
 
-                sh 'cat Dockerfile'
-
                 stash includes: 'target/*.jar', name: 'jar'
                 stash includes: 'Dockerfile', name: 'dockerfile'
             }
@@ -69,6 +67,9 @@ pipeline {
                                     ''',
                                     returnStdout: true
                                 ).trim()
+
+                                print('RESPONSE:')
+                                print(response)
 
                                 assert response == '200'
                             }
