@@ -2,6 +2,7 @@ pipeline {
     environment {
         registry = 'qts8n/petclinic'
         registryCredential = 'dockerhub'
+        networkName = 'petclinic'
         dockerImage = ''
     }
 
@@ -36,6 +37,8 @@ pipeline {
 
                 sh 'MAVEN_CONFIG="" ./mvnw package'
 
+                sh 'cat Dockerfile'
+
                 stash includes: 'target/*.jar', name: 'jar'
                 stash includes: 'Dockerfile', name: 'dockerfile'
             }
@@ -53,16 +56,27 @@ pipeline {
         }
 
         stage('Smoke testing') {
-            docker.image("$registry:$BUILD_NUMBER").withRun('--name petclinic --network jenkins') {
-                def response = sh(
-                    script: '''
-                        $(curl --write-out '%{http_code}' \
-                            --silent --output /dev/null 127.0.0.1:8080)
-                    ''',
-                    returnStdout: true
-                ).trim()
+            steps {
+                sh "docker network create $networkName"
 
-                assert response == '200'
+                script {
+                    try {
+                        docker.image("$registry:$BUILD_NUMBER").withRun("--name petclinic --network $networkName") {
+                            docker.image('curlimages/curl').inside("--network $networkName --entrypoint=''") {
+                                def response = sh(
+                                    script: '''
+                                        curl --write-out '%{http_code}' --silent --output /dev/null petclinic:8080
+                                    ''',
+                                    returnStdout: true
+                                ).trim()
+
+                                assert response == '200'
+                            }
+                        }
+                    } catch (ex) {
+                        print(ex)
+                    }
+                }
             }
         }
 
@@ -78,10 +92,18 @@ pipeline {
     }
     post {
         cleanup {
-            try {
-                sh "docker rmi $registry:$BUILD_NUMBER"
-            } catch (ex) {
-                print('Image not found')
+            script {
+                try {
+                    sh "docker rmi $registry:$BUILD_NUMBER"
+                } catch (ex) {
+                    print(ex)
+                }
+
+                try {
+                    sh "docker network rm $networkName"
+                } catch (ex) {
+                    print(ex)
+                }
             }
         }
     }
