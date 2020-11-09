@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Deployment
+metadata:
+  name: petclinic
+  namespace: petclinic
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: petclinic-server
+    spec:
+      containers:
+      - name: petclinic
+        image: qts8n/petclinic:33
+        imagePullPolicy: None
+        ports:
+        - containerPort: 8080
